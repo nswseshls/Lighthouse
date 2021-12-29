@@ -252,12 +252,20 @@ whenAddressIsReady(function() {
    
    
    // what3words
+   console.log(masterViewModel.geocodedAddress.peek())
 	if(typeof masterViewModel.geocodedAddress.peek() == 'undefined') {
 		console.log("what3words: Address Not Geocoded")
       // $('#what3words-text').html("Not A Searchable Address");
+	// No Lat Long
+	} else if (masterViewModel.geocodedAddress.peek().Latitude == null || masterViewModel.geocodedAddress.peek().Longitude == null) {
+		console.log("what3words: Address Not Geocoded")
+		// $('#what3words-text').html("Not A Searchable Address");
+	
+	/* //Leave this off, OK if street not geocoded
 	} else if (masterViewModel.geocodedAddress.peek().Street == null || masterViewModel.geocodedAddress.peek().StreetNumber == null) {
 		console.log("what3words: Address Not Geocoded")
 		// $('#what3words-text').html("Not A Searchable Address");
+	*/
     } else {
 		what3words(masterViewModel.geocodedAddress.peek(), function(res) {
 			if (res == false) {
