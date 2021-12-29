@@ -252,7 +252,6 @@ whenAddressIsReady(function() {
    
    
    // what3words
-   console.log(masterViewModel.geocodedAddress.peek())
 	if(typeof masterViewModel.geocodedAddress.peek() == 'undefined') {
 		console.log("what3words: Address Not Geocoded")
       // $('#what3words-text').html("Not A Searchable Address");
@@ -318,6 +317,9 @@ quickCategory = return_quickcategorybutton();
 quickRadioLog = return_quickradiologbutton();
 instantRadiologModal = return_quickradiologmodal();
 
+quickPhoneCall = return_quickphonecallbutton();
+instantPhoneCallModal = return_quickphonecallmodal();
+
 
 //the quicktask button
 $(quickTask).find('button').click(function() {
@@ -343,9 +345,11 @@ $(quickCategory).find('button').click(function() {
   }
 });
 
-
 //add the radio log modal
 $( "body" ).append(instantRadiologModal);
+
+//add the phone call modal
+$( "body" ).append(instantPhoneCallModal);
 
 //the quick radio log button
 $(quickRadioLog).find('button').click(function() {
@@ -357,18 +361,50 @@ $(quickRadioLog).find('button').click(function() {
   $('#instantradiologModal').modal()
 });
 
+
+
+//the phone call log button - open modal on button click
+$(quickPhoneCall).find('#lhquickphonecall_caller').click(function() {
+  console.log("lhquickphonecall_caller clicked")
+  $('#instantPhoneCallSubject').val(masterViewModel.enteredCallerName() + ' - ' + masterViewModel.callerNumber())
+  $('#instantPhoneCallSubjectForm').find('label').text('Caller')
+  $('#instantPhoneCallModal').modal()
+});
+
+$(quickPhoneCall).find('#lhquickphonecall_contact').click(function() {
+	console.log("lhquickphonecall_contact clicked")
+  $('#instantPhoneCallSubject').val(masterViewModel.enteredContactName() + ' - ' + masterViewModel.contactNumber())
+  $('#instantPhoneCallSubjectForm').find('label').text('Contact')
+  $('#instantPhoneCallModal').modal()
+});
+
 // submit radio log on enter press in message body
 $('#instantRadioLogText').keydown(function(event) {
     if (event.keyCode == 13) {
         processSubmitInstantRadioLog()
         return false;
      }
-   })
+})
+
 
 //submit radio log on submit button press
 $(instantRadiologModal).find('#submitInstantRadioLogButton').click(function() {
-processSubmitInstantRadioLog()
+	processSubmitInstantRadioLog()
 });
+
+// submit phone call log on enter press in message body
+$('#instantPhoneCallText').keydown(function(event) {
+    if (event.keyCode == 13) {
+        processSubmitInstantRadioLog()
+        return false;
+     }
+})
+
+//submit phone call on submit button press
+$(instantPhoneCallModal).find('#submitInstantPhoneCallButton').click(function() {
+	processSubmitInstantPhoneCall()
+});
+
 
 //handle both the above submits
 function processSubmitInstantRadioLog() {
@@ -387,6 +423,38 @@ submitInstantRadioLog($('#instantRadioLogCallSign').val(),$('#instantRadioLogTex
 }
 }
 
+function processSubmitInstantPhoneCall() {
+
+  var tags = [2]
+  
+  if($('#instantPhoneCallDirectionOutgoing').prop('checked')) {
+	// 257 = Outgoing
+	callDirection = 257
+	tags.push(257)
+  } else if($('#instantPhoneCallDirectionIncoming').prop('checked')) {
+	// 256 = Incoming  
+    callDirection = 256
+	tags.push(256)
+  }
+
+
+  if ($('#instantPhoneCallText').val() == '') {
+    $('#instantPhoneCallTextForm').addClass('has-error')
+  } else if ($('#instantPhoneCallSubject').val() == '') {
+    $('#instantPhoneCallSubjectForm').addClass('has-error')
+  } else {
+	submitInstantPhoneCall($('#instantPhoneCallSubject').val(),$('#instantPhoneCallText').val(),tags,function(result) {
+  if (result) {
+    $('#instantPhoneCallModal').modal('hide')
+    $('#instantPhoneCallTextForm').removeClass('has-error') //just incase
+    $('#instantPhoneCallText').val('')
+  } else {
+    alert('Error submitting log entry')
+  }
+})
+}
+}
+
 
 whenJobIsReady(function(){
 
@@ -397,8 +465,16 @@ whenJobIsReady(function(){
 
   }
 
-  $('#lighthouse_actions_content').append(quickRadioLog);
-
+  $('#lighthouse_actions_content').append(quickRadioLog); 
+  $('#lighthouse_actions_content').append(quickPhoneCall);
+  
+  $('#lhquickphonecall_caller').show().find('small').text(masterViewModel.enteredCallerName() + ' - ' + masterViewModel.callerNumber())
+  
+  // if a seperate job contact exists
+  if(!masterViewModel.contactCalling()) {
+  	$('#lhquickphonecall_contact').show().find('small').text(masterViewModel.enteredContactName() + ' - ' + masterViewModel.contactNumber()).show()
+  }
+	
 });
 
 
@@ -808,6 +884,7 @@ function InstantSectorButton() {
   }
 }
 
+
 ////Quick Task Stuff
 function InstantTaskButton() {
 
@@ -998,13 +1075,26 @@ function InstantTaskButton() {
 ////Instant radio log stuff
 function submitInstantRadioLog(subject, text,cb) {
   masterViewModel.notesViewModel.OperationsLogManager.CreateEntry(jobId, null, null, null, subject || "Instant Radio Log", text, null, null, null, !1, !1, false, null, [15,6], null, function(res) {
-if (res) {
-      masterViewModel.notesViewModel.loadOpsLogPage()
-      cb(true)
-    } else {
-      cb(false)
-    }
-})
+	if (res) {
+		  masterViewModel.notesViewModel.loadOpsLogPage()
+		  cb(true)
+		} else {
+		  cb(false)
+		}
+	})
+
+}
+
+// instant phone call
+function submitInstantPhoneCall(subject, text, tags, cb) {
+  masterViewModel.notesViewModel.OperationsLogManager.CreateEntry(jobId, null, null, null, subject || "Instant Phone Call ", text, null, null, null, !1, !1, false, null, tags, null, function(res) {
+	if (res) {
+		  masterViewModel.notesViewModel.loadOpsLogPage()
+		  cb(true)
+		} else {
+		  cb(false)
+		}
+	})
 
 }
 
@@ -1136,7 +1226,7 @@ $(document).ready(function() {
 function return_quicktaskbutton() {
   return (
     <div id="lighthouse_instanttask" style="position:relative;display:inline-block;vertical-align:middle;padding-left:3px;padding-right:3px;" class="dropdown">
-      <button class="btn btn-sm btn-warning dropdown-toggle" type="button" data-toggle="dropdown" id="lhtaskbutton"><i class="fa fa-tasks"></i>Instant Task
+      <button class="btn btn-sm btn-warning dropdown-toggle" type="button" data-toggle="dropdown" id="lhtaskbutton"><i class="fa fa-tasks"></i> Instant Task
       <span class="caret"></span></button>
       <ul class="dropdown-menu scrollable-menu">
       </ul>
@@ -1147,7 +1237,7 @@ function return_quicktaskbutton() {
 function return_quicksectorbutton() {
   return (
     <div id="lighthouse_instantsector" style="position:relative;display:inline-block;vertical-align:middle;padding-left:3px;padding-right:3px;" class="dropdown">
-      <button class="btn btn-sm btn-info dropdown-toggle" type="button" data-toggle="dropdown" id="lhsectorbutton"><i class="fa fa-cubes"></i>Instant Sector
+      <button class="btn btn-sm btn-info dropdown-toggle" type="button" data-toggle="dropdown" id="lhsectorbutton"><i class="fa fa-cubes"></i> Instant Sector
       <span class="caret"></span></button>
       <ul class="dropdown-menu scrollable-menu">
       </ul>
@@ -1158,7 +1248,7 @@ function return_quicksectorbutton() {
 function return_quickcategorybutton() {
   return (
     <div id="lighthouse_instantcategory" style="position:relative;display:inline-block;vertical-align:middle;padding-left:3px;padding-right:3px;" class="dropdown">
-      <button class="btn btn-sm btn-default dropdown-toggle" type="button" data-toggle="dropdown" id="lhcategorybutton"><i class="fa fa-database"></i>Instant Category
+      <button class="btn btn-sm btn-default dropdown-toggle" type="button" data-toggle="dropdown" id="lhcategorybutton"><i class="fa fa-database"></i> Instant Category
       <span class="caret"></span></button>
       <ul class="dropdown-menu scrollable-menu">
       </ul>
@@ -1169,7 +1259,7 @@ function return_quickcategorybutton() {
 function return_quickradiologbutton() {
   return (
     <div id="lighthouse_instantradiolog" style="position:relative;display:inline-block;vertical-align:middle;padding-left:3px;padding-right:3px;">
-      <button class="btn btn-sm btn-default" style="background-color: #837947;border-color: #837947" type="button" id="lhinstantradiologbutton"><i class="fa fa-microphone"></i>Instant Radio Log
+      <button class="btn btn-sm btn-default" style="background-color: #837947;border-color: #837947" type="button" id="lhinstantradiologbutton"><i class="fa fa-microphone"></i> Instant Radio Log
       </button>
     </div>
   );
@@ -1206,6 +1296,78 @@ function return_quickradiologmodal() {
             <div class="modal-footer">
               <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
               <button type="button" class="btn btn-info" id="submitInstantRadioLogButton"><span class="button-text">Submit</span></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+function return_quickphonecallbutton() {
+  return (
+    <div id="lighthouse_instantphonecall" style="position:relative;display:inline-block;vertical-align:middle;padding-left:3px;padding-right:3px;" class="dropdown">
+      <button class="btn btn-sm btn-warning dropdown-toggle" style="background-color: #837947;border-color: #837947" type="button" data-toggle="dropdown" id="lhinstantphonecallbutton"><i class="fa fa-phone"></i> Instant Phone Call Log
+      <span class="caret"></span></button>
+      <ul class="dropdown-menu scrollable-menu">
+		<li><a id="lhquickphonecall_caller" style="text-align:left;display:none;" href="#"><b>Caller</b> <small></small></a></li>
+		<li><a id="lhquickphonecall_contact" style="text-align:left;display:none;" href="#"><b>Job Contact</b> <small></small></a></li>
+      </ul>
+    </div>
+  );
+	
+}
+
+function return_quickphonecallmodal() {
+  return (
+    <div class="modal fade" id="instantPhoneCallModal" role="dialog" style="display: none;">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header" style="background-color: #837947;border-color: #837947">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title"><i class="fa fa-phone"></i> Instant Phone Call Entry | Job</h4>
+          </div>
+          <div class="modal-body">
+          <div class="form-group" title="" id="instantPhoneCallDirectionForm">
+            <div class="row">
+              <label class="col-md-4 col-lg-3 control-label">Direction</label>
+              <div class="col-md-8 col-lg-9">
+				<div class="btn-group btn-group-toggle" data-toggle="buttons">
+				  <label class="btn btn-phonecall">
+					<input type="radio" name="instantPhoneCallDirection" id="instantPhoneCallDirectionIncoming" /> Incoming
+				  </label>
+				  <label class="btn btn-phonecall active">
+					<input type="radio" name="instantPhoneCallDirection" id="instantPhoneCallDirectionOutgoing" checked /> Outgoing
+				  </label>
+				</div>
+              </div>
+              <div title="">
+              </div>
+            </div>
+          </div>
+          <div class="form-group" title="" id="instantPhoneCallSubjectForm">
+            <div class="row">
+              <label class="col-md-4 col-lg-3 control-label">Caller</label>
+              <div class="col-md-8 col-lg-9">
+                <textarea id="instantPhoneCallSubject" class="form-control" rows="1">
+				</textarea>
+              </div>
+              <div title="">
+              </div>
+            </div>
+          </div>
+            <div class="form-group" title="" id="instantPhoneCallTextForm">
+              <div class="row">
+                <label class="col-md-4 col-lg-3 control-label">Note</label>
+                <div class="col-md-8 col-lg-9">
+                  <textarea id="instantPhoneCallText" class="form-control"></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-info" id="submitInstantPhoneCallButton"><span class="button-text">Submit</span></button>
             </div>
           </div>
         </div>

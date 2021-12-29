@@ -243,3 +243,15 @@ div[data-bind="text: $data"] {
         transform: translateY(-100%);
     }
 }
+
+.btn-phonecall {
+	background-color: #837947;
+	border-color: #837947;
+	color: #fff;
+}
+
+.btn-phonecall.active {
+	background-color: #584d16;
+	border-color: #584d16;
+	color: #fff;
+}
